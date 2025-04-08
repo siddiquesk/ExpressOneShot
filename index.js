@@ -1,9 +1,17 @@
 import express from 'express';
 const app = express();
-import Person from './models/person.js'
+import cookieParser from 'cookie-parser';
+import session from 'express-session';
+//import Person from './models/person.js'
 import {connectDb} from "./config/db.js"
 await connectDb();
 
+app.use(cookieParser());
+app.use(session({
+  secret:'sample-secret',
+  resave:false,
+  saveUninitialized:true,
+}))
 app.use(express.json());
 
 /*
@@ -12,7 +20,7 @@ app.use("/", router);
 */
 
 
-
+/*
 app.post('/person', async(req, res) => {
   try{
    const cretaePerson= await Person.create(req.body);
@@ -37,7 +45,7 @@ app.get("/person",async(req,res)=>{
   }
 })
 
-/*//correct hai ye bhi update logics
+correct hai ye bhi update logics
 app.put('/person/:id', async (req, res) => {
   const { id } = req.params;
   try {
@@ -58,7 +66,7 @@ app.put('/person/:id', async (req, res) => {
   }
 });
 
-*/
+
 app.put("/person/:id",async(req,res)=>{
   try{
   const update =await Person.findByIdAndUpdate(req.params.id,req.body,{new:true});
@@ -84,8 +92,94 @@ app.delete("/person/:id",async(req,res)=>{
   }
 })
 
+*/
 
+//session cookie management
+/*
+app.get('/',(req,res)=>{
+  res.cookie('name','sufiyan',{maxAge:20000});
+  res.send('hello express');
+})
+app.get('/fetch',(req,res)=>{
+  console.log(req.cookies)
+  res.send('api called');
+})
+app.get("/last",(req,res)=>{
+  res.clearCookie('name');
+  res.send('done');
+})
+*/
+/*
+app.get('/visit',(req,res)=>{
+  if(req.session.page_views){
+    req.session.page_views++;
+    res.send(`you visited this page views ${req.session.page_views} times`);
+  }else{
+    req.session.page_views=1
+    res.send('welcome');
+  }
+})
 
+app.get("/remove", (req, res) => {
+  req.session.destroy(err => {
+    if (err) {
+      return res.status(500).send("Session not removed");
+    }
+
+    // Clear the cookie on client side
+    res.clearCookie("connect.sid");  // 👈 clears the cookie from browser
+    res.send("Session removed and cookie cleared");
+  });
+});
+*/
+
+let users = []; // 🔹 In-memory array to store registered users (temporary storage)
+
+// ✅ Route: Homepage
+app.get('/', (req, res) => {
+  res.send('hi'); // Just a basic response for root path
+});
+
+// ✅ Route: Register new user
+app.post('/register', (req, res) => {
+  const { username, password } = req.body; // 🔸 Extract username and password from request body
+
+  users.push({
+    username,
+    password
+  }); // 🔸 Add new user to the 'users' array
+
+  res.send('user registered success'); // 🔸 Send success response
+});
+
+// ✅ Route: Login user
+app.post('/login', (req, res) => {
+  const { username, password } = req.body; // 🔸 Extract username and password from request body
+
+  // 🔸 Check if user exists in the users array
+  const user = users.find(u => u.username === username);
+
+  // 🔸 If user not found or password doesn't match
+  if (!user || password !== user.password) {
+    return res.status(400).send('Not authorized');
+  }
+
+  // 🔸 If login is valid, store user info in session
+  req.session.user = user;
+
+  res.send('user Logged in'); // 🔸 Send success response
+});
+
+// ✅ Route: Dashboard (Protected Route)
+app.get('/dashboard', (req, res) => {
+  // 🔸 Check if session contains logged-in user
+  if (!req.session.user) {
+    return res.status(403).send("un-authorized"); // 🔴 Not logged in
+  }
+
+  // 🔸 If logged in, show dashboard with username
+  res.send(`welcome ${req.session.user.username}`);
+});
 
 
 app.listen(8000, () => {
